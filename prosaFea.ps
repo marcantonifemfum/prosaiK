@@ -1,0 +1,246 @@
+%!
+%#  `GNU GPL FemFum prosaFea.ps v.01´ llegeix i repica seqüencialment, quick&dirty, un arxiu en format .fea (UFO/afdko)
+%#  segons una idea de Josep Patau Bellart http://www.tipopepel.com per ajustar de cop els valors del kerning,
+%#  sumant o restant en funció d'un % que apliquem al valor de prosa i on la dificultat rau en detectar correctament
+%#  les línies tipus 'pos' i 'enum pos' respectant la sintaxi dels seus continguts, com per exemple:
+%%  pos @MMK_L_r @MMK_R_o -12;
+%%  que si hi apliquem una resta del 50% queda:
+%%  pos @MMK_L_r @MMK_R_o -6;
+
+%#  Per a intèrprets `GNU GPL Ghostscript´ però també, amb ben pocs retocs, pot córrer
+%#  amb l'Adobe Acrobat Distiller (fins hi tot amb MacOSX PSNormalizer Framework/Apple pstopdf).
+%# 
+%#  `Copyleft 2019 :: l'Ametlla de Merola :: Marc Antoni Malagarriga i Picas´
+%#  `<http://www.femfum.com> | <marcantoni@femfum.com>´
+%#  `https://github.com/marcantonifemfum/prosaiK´
+%# 
+%#  Aquest programa és programari lliure: podeu redistribuir-lo i/o modificar-lo
+%#  sota els termes de la Llicència Pública General de GNU publicada per la Free
+%#  Software Foundation, ja sigui la versió 3 de la Llicència, o (a la seva elecció)
+%#  qualsevol versió posterior.
+%# 
+%#  Aquest programa es distribueix amb l'esperança que sigui útil, però SENSE CAP GARANTIA;
+%#  ni tan sols la garantia implícita MERCANTIL o d'APTITUD PER A UN OBJECTIU PARTICULAR.
+%#  Consulteu els detalls de la Llicència Pública General de GNU per a més informació.
+%# 
+%#  Haurieu de rebre una còpia de la Llicència Pública General de GNU junt amb aquest
+%#  programa. En cas contrari, consulteu <http://www.gnu.org/licenses/>
+%# 
+
+%% hauríem d'interpretar a fons la sintaxi per fer un ús intensiu del format OpenType Feature File Specification:
+%% https://adobe-type-tools.github.io/afdko/OpenTypeFeatureFileSpecification.html
+%% http://unifiedfontobject.org/versions/ufo3/features.fea/
+%% http://unifiedfontobject.org/versions/ufo3/fontinfo.plist/
+%% http://unifiedfontobject.org/versions/ufo3/groups.plist/
+%% http://unifiedfontobject.org/versions/ufo3/kerning.plist/
+
+%% línia e comanda a Ghostscript
+%% gs -q -dNOSAFER -o re.pdf -sDEVICE=pdfwrite -c .setpdfwrite -f prosaFea.ps
+
+{  %% stopped
+ (opcions_prosaFea.txt) (r) file cvx exec  %% valors de menú
+
+ %(/Users/femfum/calaixDtipus/PepelPatau/prosa/RomanaEspanolaNegraKern.fea)
+ /allegir exch def  %% path del .fea a modificar
+
+ %false
+ /SoR exch def  %% sumem (true) o restem (false) el % calculat
+
+ %50
+ /TxC exch def  %% tant per cent del valor de kern a sumar/restar
+
+ (_ffpepel)
+ /extW exch def  %% extensió extra pel fitxer de lectura
+ allegir length dup /araVa exch def extW length add string dup
+ 0 allegir putinterval dup araVa extW putinterval /aescriure exch def
+
+ allegir (r) file /allegir_f exch def
+ aescriure (w) file /aescriure_f exch def
+
+ %% info
+ (\n\n >> estem modificant els valors de kerning a...\n\n)print flush
+ allegir print flush
+ (\n\n >> amb un % del...\n\n)print flush
+ TxC 12 string cvs print flush
+ (\n\n >> que li )print flush
+ SoR
+ {
+  (afegim a la prosa de cada parell)print flush
+ }
+ {
+  (restem a la prosa de cada parell)print flush
+ }ifelse
+ ( ...i repiquem a...\n\n)print flush
+ aescriure print flush
+
+ allegir_f
+ {  %% loop
+  dup 1024 string readline
+  {
+%%Cal veure si el format .fea ho fa fiable
+   dup (pos ) search
+   {  %% aquesta és la cadena clau per localitzar el valor de prosa
+%%La línia iniciada per pos que duu el kerning sempre tindrà només 3 elements més
+    2 index mark exch
+    {  %% loop
+     token
+     {
+      exch
+     }
+     {
+      exit
+     }ifelse
+    }loop
+    counttomark 3 eq
+    {
+     cleartomark
+%(vvvv)pstack quit
+     aescriure_f exch writestring
+     aescriure_f exch writestring
+     exch pop
+%%Cal veure si el format .fea ho fa fiable
+     2
+     %% també podríem jugar amb l'operador token i seríem transparents al tipus i nombre de separadors dels valors
+     {
+      ( ) search
+      {
+       aescriure_f exch writestring
+       aescriure_f exch writestring
+      }if
+     }repeat
+%%Cal veure si el format .fea ho fa fiable
+%%Aquí tenim el valor de kern amb el darrer ;
+     (;) search
+     {
+      cvx exec dup  %% kern d'string a numèric
+      TxC mul 100 div  %% càlcul del %
+      round cvi  %% arrodoniment
+      SoR
+      {  %% l'afegim al kern
+       add
+      }
+      {  %% el restem al kern
+       sub
+      }ifelse
+      12 string cvs  %% en teoria no hauria de tenir mai més de 4 caràcter comptant el signe
+      aescriure_f exch writestring
+      aescriure_f exch writestring  %% ;
+      aescriure_f (\012) writestring
+      pop  %% cua de la línia més enllà de pos ... ;
+%(yyyy)pstack aescriure_f closefile quit
+     }
+     {
+      aescriure_f closefile
+      (\n\n >> EP1 el lector del format .fea ha fallat ...pleguem!\n\n)print flush pstack quit
+     }ifelse
+    }
+    {  %% és una línia 'enum pos' i té més de 3 tokens? (el kern final també s'ha de modificar)
+     %% es pot donar el cas que tingui 3 elements i no dugui el kern associat al final?
+     12 string cvs /Skern exch def  %% capturem el valor del kern i el passem a string abans no es transformia immediate!
+     cleartomark
+     (enum) search  %% si duu enum és que també és una línia de kern
+     {
+      pop pop pop pop pop
+      %% extraiem i escrivim tota la línia menys el seu valor de kern
+      Skern search
+      {
+       exch (;) search
+       {
+        cvx exec dup  %% kern d'string a numèric
+        TxC mul 100 div  %% càlcul del %
+        round cvi  %% arrodoniment
+        SoR
+        {  %% l'afegim al kern
+         add
+        }
+        {  %% el restem al kern
+         sub
+        }ifelse
+        12 string cvs  %% en teoria no hauria de tenir mai més de 4 caràcter comptant el signe
+        4 -1 roll
+        aescriure_f exch writestring  %% enum ...
+        aescriure_f exch writestring  %% ###
+        aescriure_f exch writestring  %% ;
+        aescriure_f (\012) writestring
+        pop pop  %% cues de la línia
+       }
+       {
+        aescriure_f closefile
+        (\n\n >> EP4 el lector del format .fea ha fallat ...pleguem!\n\n)print flush pstack quit
+       }ifelse
+      }
+      {
+       aescriure_f closefile
+       (\n\n >> EP3 el lector del format .fea ha fallat ...pleguem!\n\n)print flush pstack quit
+      }ifelse
+     }
+     {
+      pop (pos) search
+      {
+       pop pop pop pop
+       (;) search
+       {
+        dup /LposArray exch def  %% desem la línia que duu pos i un array de glifs
+        length dup /aFins exch def 1 sub -1 0
+        {  %% for per cercar on és el darrer espai en blanc i poder computar el kern
+         dup /i exch def
+         LposArray exch get
+         32 eq
+         {
+          exit
+         }if
+        }for
+        exch pop  %% brossa de la línia
+        LposArray i aFins i sub getinterval cvx exec  %% pesquem el numèric dins l'string del kern computable
+        LposArray 0 i 1 add getinterval  %% pesquem fins l'espai en blanc just abans del kern
+        aescriure_f exch writestring  %% (pos * [*])
+        dup  %% kern d'string a numèric
+        TxC mul 100 div  %% càlcul del %
+        round cvi  %% arrodoniment
+        SoR
+        {  %% l'afegim al kern
+         add
+        }
+        {  %% el restem al kern
+         sub
+        }ifelse
+        12 string cvs  %% en teoria no hauria de tenir mai més de 4 caràcter comptant el signe
+        aescriure_f exch writestring  %% ###
+        aescriure_f exch writestring  %% ;
+        aescriure_f (\012) writestring
+       }
+       {
+        (\n\n >> EP5 el lector del format .fea ha fallat ...pleguem!\n\n)print flush pstack quit
+       }ifelse
+      }
+      {
+       aescriure_f closefile
+       (\n\n >> EP2 el lector del format .fea ha fallat ...pleguem!\n\n)print flush pstack quit
+      }ifelse
+     }ifelse
+    }ifelse
+   }
+   {
+    pop
+%%Aquí repiquem les línies que no es modifiquen
+    aescriure_f exch writestring
+    aescriure_f (\012) writestring
+   }ifelse
+  }
+  {
+%%Aquí repiquem les línies que no es modifiquen
+   aescriure_f exch writestring
+   aescriure_f (\012) writestring
+   closefile
+   aescriure_f closefile
+   (\n\n ...FET!\n\n)print flush
+   exit
+  }ifelse
+ }loop
+}stopped
+{
+ aescriure_f closefile
+ (\n\n ...no abarateixis el somni!\n\n)print flush
+ (---prosaicament ha fracassat---)pstack
+}if
+

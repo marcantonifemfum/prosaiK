@@ -1,0 +1,23 @@
+%!
+%% escriu aquí les 3 opcions que tenim per l'algorisme prosaFea.ps
+
+%% tant per cent del valor de kern a sumar/restar (pot dur signe... -50 ...o decimals... 50.09)
+
+50
+
+
+%% sumem (true) o restem (false) el % calculat
+
+false
+
+
+%% adreça completa (path) del .fea a modificar (ascii pur: eviteu accents, espais en blanc, etc)
+%% si es treballa tot en el mateix directori, amb el nom del fitxer n'hi ha prou
+
+%(/Users/femfum/calaixDtipus/PepelPatau/prosa/RomanaEspanolaNegraKern.fea)
+%(RomanaEspanolaNegraKern.fea)
+%(GeoDecoHeavyKern_copia.fea)
+%(Indecise3kern.fea)
+(798_ik.fea)
+
+%% peten
